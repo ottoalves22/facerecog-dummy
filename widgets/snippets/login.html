@@ -1,0 +1,72 @@
+<!-- INICIO: Cadastro para reconhecimento facial -->
+
+
+<div class='snippet' id='face-register'>
+    <div class="row">
+        <div class="column">
+            <h2>Cadastre-se</h2>
+            <form class='container-register'>
+                <!-- Elemento <input> com o nome do usuário -->
+                <label>
+                    <div>Nome</div>
+                    <input name='full_name' type='text' class='input' required />
+                </label>
+                <!-- Elemento <input> com o email do usuário -->
+                <label>
+                    <div>Email</div>
+                    <input name='email' type='text' class='input' required />
+                </label>
+                <!-- Elemento <input> com o documento de identificação do usuário -->
+                <label>
+                    <div>Doc. de Identificação</div>
+                    <input name='document' type='text' class='input' />
+                </label>
+                <!-- Elemento <input> com o código externo do usuário -->
+                <label>
+                    <div>Cód. Externo</div>
+                    <input name='external_cod' type='text' class='input' />
+                </label>
+                <label>
+                    <input name='authorization' type='checkbox' required />
+                    Li e aceito os termos e condições de uso.
+                    <a href="#" class="new-window"></a>
+                </label>
+            </form>
+        </div>
+        <div class="column">
+            <div class='container-camera' id="photo-camera">
+                <!-- Elemento <video> de captura de câmera e <canvas> para exibição da foto capturada -->
+                <video></video>
+                <canvas class='hidden fade'></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="column container-button">
+            <button id='register' class='button button-primary' disabled>
+                Finalizar cadastro
+            </button>
+        </div>
+        <div class="column container-button">
+            <!-- Botões da interface -->
+            <button id='enable-camera' class='button button-primary'>
+                <i class='icon-camera'></i>
+                Habilitar câmera
+            </button>
+            <button id='take-photo' class='button button-primary hidden'>
+                <i class='icon-camera'></i>
+                Capturar
+            </button>
+            <button id='confirm-photo' class='button button-success hidden'>
+                <i class='icon-ok'></i>
+                Confirmar
+            </button>
+            <button id='take-new-photo' class='button button-cancel hidden'>
+                <i class='icon-cancel'></i>
+                Tirar novamente
+            </button>
+        </div>
+    </div>
+</div>
+<!-- FIM: Cadastro para reconhecimento facial -->
+

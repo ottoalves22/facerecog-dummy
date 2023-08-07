@@ -1,0 +1,66 @@
+<!-- INICIO: Identificação de Emoções Mediante Expressões Faciais em Tempo Real -->
+
+
+<div class='snippet' id='face-emotion'>
+    <div class="row">
+        <div class="column">
+            <div class="container-camera" id="photo-camera">
+                <!-- Elemento <video> de captura de câmera e <canvas> para exibição da foto capturada -->
+                <video></video>
+                <canvas class="hidden fade" id="output"></canvas>
+            </div>
+        </div>
+        <div class="column">
+            <h2>Emoções</h2>
+            <div id="emotion-suprise">
+                <b class="emotion">Surpreso</b>
+                <div class="progressbar"><span class="progress" style="width: 0%;"></span></div><span
+                    class="result">0%</span>
+            </div>
+            <div id="emotion-happy">
+                <b class="emotion">Feliz</b>
+                <div class="progressbar"><span class="progress" style="width: 0%;"></span></div><span
+                    class="result">0%</span>
+            </div>
+            <div id="emotion-neutral">
+                <b class="emotion">Neutro</b>
+                <div class="progressbar"><span class="progress" style="width: 0%;"></span></div><span
+                    class="result">0%</span>
+            </div>
+            <div id="emotion-disgust">
+                <b class="emotion">Desgosto</b>
+                <div class="progressbar"><span class="progress" style="width: 0%;"></span></div><span
+                    class="result">0%</span>
+            </div>
+            <div id="emotion-sad">
+                <b class="emotion">Triste</b>
+                <div class="progressbar"><span class="progress" style="width: 0%;"></span></div><span
+                    class="result">0%</span>
+            </div>
+            <div id="emotion-angry">
+                <b class="emotion">Bravo</b>
+                <div class="progressbar"><span class="progress" style="width: 0%;"></span></div><span
+                    class="result">0%</span>
+            </div>
+            <div id="emotion-fear">
+                <b class="emotion">Medo</b>
+                <div class="progressbar"><span class="progress" style="width: 0%;"></span></div><span
+                    class="result">0%</span>
+            </div>
+            <small id="emotion-status"></small>
+        </div>
+    </div>
+    <div class="row">
+        <div class="column container-button">
+            <!-- Botões da interface -->
+            <button id="enable-camera" class="button button-primary">
+                <i class="icon-camera"></i>
+                Habilitar câmera
+            </button>
+        </div>
+        <div class="column container-button">
+        </div>
+    </div>
+</div>
+<!-- FIM: Identificação de Emoções Mediante Expressões Faciais em Tempo Real -->
+

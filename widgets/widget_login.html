@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Reconhecimento facial</title>
+  </head>
+
+  <body>
+    <!-- INICIO: Reconhecimento facial -->
+    <div class="snippet" id="face-recognition">
+      <div class="container-camera">
+        <!-- Elemento <video> de captura de câmera e <canvas> para exibição da foto capturada -->
+        <video></video>
+        <canvas class="hidden fade"></canvas>
+        <div class="message-box hidden">
+          <div class="message-dialog success hidden">
+            <div class="message-icon">
+              <svg class="circular green-stroke">
+                <circle
+                  class="path"
+                  cx="75"
+                  cy="75"
+                  r="50"
+                  fill="none"
+                  stroke-width="5"
+                  stroke-miterlimit="10"
+                />
+              </svg>
+              <svg class="checkmark green-stroke">
+                <g
+                  transform="matrix(0.79961,8.65821e-32,8.39584e-32,0.79961,-489.57,-205.679)"
+                >
+                  <path
+                    class="checkmark__check"
+                    fill="none"
+                    d="M616.306,283.025L634.087,300.805L673.361,261.53"
+                  />
+                </g>
+              </svg>
+            </div>
+            <div>Você foi logado com sucesso!</div>
+          </div>
+          <div class="message-dialog fail hidden">
+            <div class="message-icon">
+              <svg class="circular red-stroke">
+                <circle
+                  class="path"
+                  cx="75"
+                  cy="75"
+                  r="50"
+                  fill="none"
+                  stroke-width="5"
+                  stroke-miterlimit="10"
+                />
+              </svg>
+              <svg class="cross red-stroke">
+                <g
+                  transform="matrix(0.79961,8.65821e-32,8.39584e-32,0.79961,-502.652,-204.518)"
+                >
+                  <path
+                    class="first-line"
+                    d="M634.087,300.805L673.361,261.53"
+                    fill="none"
+                  />
+                </g>
+                <g
+                  transform="matrix(-1.28587e-16,-0.79961,0.79961,-1.28587e-16,-204.752,543.031)"
+                >
+                  <path
+                    class="second-line"
+                    d="M634.087,300.805L673.361,261.53"
+                  />
+                </g>
+              </svg>
+            </div>
+            <div class="message-text">
+              Infelizmente, não encontrei o seu usuário.
+            </div>
+          </div>
+
+          <div class="message-dialog select-email hidden">
+            <div>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                fill="currentColor"
+                class="bi bi-envelope-fill"
+                viewBox="0 0 16 16"
+              >
+                <path
+                  d="M.05 3.555A2 2 0 0 1 2 2h12a2 2 0 0 1 1.95 1.555L8 8.414.05 3.555zM0 4.697v7.104l5.803-3.558L0 4.697zM6.761 8.83l-6.57 4.027A2 2 0 0 0 2 14h12a2 2 0 0 0 1.808-1.144l-6.57-4.027L8 9.586l-1.239-.757zm3.436-.586L16 11.801V4.697l-5.803 3.546z"
+                />
+              </svg>
+            </div>
+            <div class="message-text">Por favor, selecione o seu email:</div>
+            <div id="selected-email" class="email-list"></div>
+          </div>
+
+          <div class="message-dialog validate hidden">
+            <div>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="50"
+                height="50"
+                fill="currentColor"
+                class="bi bi-key-fill"
+                viewBox="0 0 16 16"
+              >
+                <path
+                  d="M3.5 11.5a3.5 3.5 0 1 1 3.163-5H14L15.5 8 14 9.5l-1-1-1 1-1-1-1 1-1-1-1 1H6.663a3.5 3.5 0 0 1-3.163 2zM2.5 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"
+                />
+              </svg>
+            </div>
+            <div class="message-text">
+              Por favor, digite o código que te enviamos...
+            </div>
+            <div>
+              <label>
+                <input
+                  id="validate-code"
+                  type="text"
+                  minlength="6"
+                  maxlength="6"
+                  class="large input"
+                  required
+                />
+                <span class="error hidden">Código inválido</span>
+              </label>
+            </div>
+          </div>
+          <div class="message-dialog loading hidden">
+            <div class="lds-dual-ring"></div>
+            <div>Aguarde...</div>
+          </div>
+        </div>
+      </div>
+      <div class="container-button">
+        <!-- Botões da interface -->
+        <button id="enable-camera" class="button button-primary">
+          <i class="icon-camera"></i>
+          Habilitar câmera
+        </button>
+        <button id="take-photo" class="button button-primary hidden">
+          <i class="icon-camera"></i>
+          Capturar
+        </button>
+        <button id="confirm-photo" class="button button-success hidden">
+          <i class="icon-ok"></i>
+          Confirmar
+        </button>
+        <button id="take-new-photo" class="button button-cancel hidden">
+          <i class="icon-cancel"></i>
+          Tirar novamente
+        </button>
+      </div>
+      <br />
+
+      <label>
+        <input id="force2FA" type="checkbox" required />
+        Forçar autenticação de dois fatores
+      </label>
+    </div>
+    <!-- FIM: Reconhecimento facial -->
+
+    <script>
+      //Placeholhder para endereço da api
+      let apiUrl = "<API_URL>"
+
+      //Placeholhder para token de acesso
+      let token = "<API_TOKEN>"
+
+      /* Principais elementos da interface:
+            - faceRecognition: <div> que engloba o componente
+            - camera: <video> que exibe a captura da webcam
+            - photoTaken: <canvas> que exibe a foto capturada
+            - btnEnableCamera: <button> que habilita a captura da foto
+            - btnTakePhoto: <button> que dispara a captura da foto
+            - btnConfirmPhoto: <button> que confirma a captura da foto
+            - btnTakeNewPhoto: <button> que permite capturar uma nova foto
+            - force2FactorsAuth: <input> do tipo checkbox que permite ativar/desativar a autenticação de 2 fatores
+            - validationCode: <input> que permite inserir o código autenticação de 2 fatores
+        */
+      let faceRecognition = document.getElementById('face-recognition');
+      let camera = faceRecognition.querySelector('video');
+      let photoTaken = faceRecognition.querySelector('canvas');
+
+      let btnEnableCamera = document.getElementById('enable-camera');
+      let btnTakePhoto = document.getElementById('take-photo');
+      let btnConfirmPhoto = document.getElementById('confirm-photo');
+      let btnTakeNewPhoto = document.getElementById('take-new-photo');
+
+      let force2FactorsAuth = document.getElementById('force2FA');
+      let validationCode = document.getElementById('validate-code');
+
+      /* Principais elementos da interface:
+            - successMessage: <div> que exibe a mensagem de sucesso
+            - errorMessage: <div> que exibe a mensagem de erro
+            - validateMessage: <div> que exibe a mensagem para autenticação de 2 fatores
+            - loading: <div> que exibe a mensagem de carregando
+        */
+      let successMessage = faceRecognition.querySelector(
+        '.message-dialog.success'
+      );
+      let errorMessage = faceRecognition.querySelector('.message-dialog.fail');
+      let validateMessage = faceRecognition.querySelector(
+        '.message-dialog.validate'
+      );
+      let selectEmailMessage = faceRecognition.querySelector(
+        '.message-dialog.select-email'
+      );
+      let loading = faceRecognition.querySelector('.message-dialog.loading');
+
+      /*
+            function startWebcam(videoElement)
+            - Inicializa a captura da câmera, pedindo permissão para acesso à câmera. Caso a permissão for negada, exibe-se uma mensagem de erro
+
+            Parâmetros:
+            - videoElement (obrigatório): elemento <video> no qual será exibido a captura da câmera
+
+            Retorno da função: Nenhum retorno
+        */
+      function startWebcam(videoElement) {
+        navigator.mediaDevices
+          .getUserMedia({
+            video: true,
+          })
+          .then((stream) => {
+            window.localStream = stream;
+            videoElement.srcObject = stream;
+            videoElement.play();
+            btnTakePhoto.classList.remove('hidden');
+            btnConfirmPhoto.classList.add('hidden');
+            btnTakeNewPhoto.classList.add('hidden');
+
+            camera.classList.remove('hidden');
+            photoTaken.classList.add('hidden');
+            photoTaken.classList.remove('show');
+          })
+          .catch(() => {
+            alert('Não foi possível acessar a câmera');
+          });
+      }
+
+      /*
+            function stopWebcam()
+            - Encerra a captura da câmera
+
+            Parâmetros: Nenhum parâmetro
+            Retorno da função: Nenhum retorno
+        */
+      function stopWebcam() {
+        localStream.getTracks().forEach((track) => {
+          track.stop();
+        });
+      }
+
+      /*
+            function b64toBlob(dataURI)
+            - Converve uma string na base64 em um objeto blob
+
+            Parâmetros:
+            - dataURI: recebe uma string na base 64
+
+            Retorno da função: um objeto do tipo blob
+        */
+      function b64toBlob(dataURI) {
+        var byteString = atob(dataURI.split(',')[1]);
+        var ab = new ArrayBuffer(byteString.length);
+        var ia = new Uint8Array(ab);
+
+        for (var i = 0; i < byteString.length; i++) {
+          ia[i] = byteString.charCodeAt(i);
+        }
+        return new Blob([ab], { type: 'image/jpeg' });
+      }
+
+      /*
+            function showLoading(enable = true)
+            - Mostra/oculta o diálogo de carregando
+
+            Parâmetros:
+            - enable (opcional, padrão: true): Mostra/oculta o diálogo de carregando
+
+            Retorno da função: nenhum retorno
+        */
+      function showLoading(enable = true) {
+        if (enable === true) {
+          btnConfirmPhoto.setAttribute('disabled', true);
+          loading.parentElement.classList.remove('hidden');
+          loading.classList.remove('hidden');
+        } else {
+          btnConfirmPhoto.removeAttribute('disabled');
+          loading.parentElement.classList.add('hidden');
+          loading.classList.add('hidden');
+        }
+      }
+
+      /*
+            function ofuscateEmail(email)
+            - Oculta parte do email. Ex.: nome.sobrenome@email.com.br -> nom*********ome@email.com.br
+
+            Parâmetros:
+            - email: string com o email
+
+            Retorno da função: string com o email parcialmente oculto
+        */
+      function ofuscateEmail(email) {
+        let beforeAt = email.substring(0, email.indexOf('@'));
+        let afterAt = email.substring(email.indexOf('@'));
+        let middle = beforeAt.substr(4, beforeAt.length - 3).replace(/./g, '*');
+        email =
+          beforeAt.substr(0, 3) +
+          middle +
+          beforeAt.substr(3 + middle.length) +
+          afterAt;
+        return email;
+      }
+
+      //Armazena o id para verificar o código de autenticação de 2 fatores
+      let validateId = '';
+
+      //Armazena o email selecionado para envio de código de autenticação de 2 fatores
+      let selectedEmail = '';
+
+      /*
+            function sendData(filename, force2FA)
+            - Insere os dados num FormData e os envia para a API
+            - Em caso de erro, exibir a mensagem de erro correspondente
+            - Em caso de necessidade de validação por 2 fatores, o dialogo é exibido
+            - Em caso de sucesso, exibir a mensagem de logado com sucesso
+
+            Parâmetros:
+            - filename: recebe uma string na base 64 com a foto do usuário
+            - force2FA (Opcional, padrão: false): recebe um boolean para ativar ou desativar a autenticação de 2 fatores
+
+            Retorno da função: nenhum retorno
+        */
+      function sendData(filename, force2FA = false) {
+        //Insere os dados num FormData
+        let formData = new FormData();
+        formData.append(
+          'photo',
+          b64toBlob(filename),
+          Math.random() + '.jpg'
+        );
+        showLoading(true);
+        //Envia os dados para a API
+        
+        const url = apiUrl.endsWith('/') ? `${apiUrl}facemath?force_2fa=${force2FA}` : `${apiUrl}/facematch?force_2fa=${force2FA}`
+        fetch(url, {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer '+ token }, // adicione aqui o seu token de aplicação
+          body: formData,
+        })
+          .then((responseData) => {
+            const status = responseData.status;
+
+            showLoading(false);
+
+            if (status === 401) {
+              let messageText = faceRecognition.querySelector(
+                '.message-dialog.fail .message-text'
+              );
+
+              messageText.innerHTML =
+                    'Não foi possível validar seu token de acesso.';
+              
+              showMessage('error', true);
+            } else if (status === 400 || status === 404) {
+              let messageText = faceRecognition.querySelector(
+                '.message-dialog.fail .message-text'
+              );
+
+              responseData.json().then((data) => {
+                const detail = data.detail;
+
+                if (detail === 'User not found.') {
+                  messageText.innerHTML =
+                    'Usuário não encontrado.';
+                } else if (detail === 'No faces detected.') {
+                  messageText.innerHTML =
+                    'Nenhuma face detectada.';
+                } else {
+                  messageText.innerHTML = detail;
+                }
+                showMessage('error', true);
+              });
+            } else {
+              //Arquivo enviado com sucesso
+              responseData.json().then((data) => {
+                let isAmbigous = data['type'] == 'more_than_one';
+
+                if (isAmbigous) {
+                  {
+                    let emailList = '';
+                    let emailListDiv = faceRecognition.querySelector(
+                      '.message-dialog.select-email .email-list'
+                    );
+                    Object.keys(data['users']).map((item, i) => {
+                      emailList += `<input
+                            type="radio"
+                            name="emailList"
+                            value='${data['users'][item].user_id}'
+                            data-email='${data['users'][item].email}'
+                          >
+                            ${ofuscateEmail(data['users'][item].email)}
+                          </input><br/>`;
+                    });
+                    if (emailList != '') {
+                      emailList += `<br/><center> <button class="button button-primary" onclick='confirmEmail()' >Confirmar</button></center>`;
+                      emailListDiv.innerHTML = emailList;
+                    }
+                  }
+                  showMessage('select-email', true);
+                } else {
+                  if (data['type'] === 'ok') {
+                    showMessage('success', true);
+                  } else if (data['type'] === 'needs_2fa') {
+                    let messageText = faceRecognition.querySelector(
+                      '.message-dialog.validate .message-text'
+                    );
+                    messageText.innerHTML = `Por favor, digite o código que enviamos em ${ofuscateEmail(
+                      data['users'][0]['email']
+                    )}`;
+                    validateId = data.id_2fa;
+                    showMessage('validate', true);
+                  } else {
+                    showMessage('success', true);
+                  }
+                }
+              }).catch(err => {
+                messageText.innerHTML = err;
+                showMessage('error', true);
+              })
+            }
+          });
+      }
+
+      /*
+            Evento OnClick do Botão 'Capturar' (#take-photo):
+            - Captura a imagem atual da câmera nas mesmas medidas e exibe a foto no elemento <canvas>.
+            - Desativa a câmera, oculta o elemento e exibe a foto capturada após 200ms.
+            - Oculta o botão 'Capturar' e exibe os botões 'Confirmar' e 'Tirar novamente'.
+        */
+      btnTakePhoto.addEventListener('click', function (e) {
+        photoTaken.height = camera.videoHeight;
+        photoTaken.width = camera.videoWidth;
+        var context = photoTaken.getContext('2d');
+        context.drawImage(camera, 0, 0);
+
+        camera.classList.add('hidden');
+        photoTaken.classList.remove('hidden');
+
+        btnTakePhoto.classList.add('hidden');
+        btnConfirmPhoto.classList.remove('hidden');
+        btnTakeNewPhoto.classList.remove('hidden');
+        setTimeout(() => {
+          photoTaken.classList.add('show');
+        }, 200);
+      });
+
+      /*
+            Evento OnClick do Botão 'Confirmar' (#confirm-photo):
+            - Inicializa a captura da câmera
+        */
+      btnEnableCamera.addEventListener('click', function (e) {
+        startWebcam(camera);
+        btnEnableCamera.classList.add('hidden');
+      });
+
+      /*
+            Evento OnClick do Botão 'Confirmar' (#confirm-photo):
+            - Capta os dados e envia para API através da função sendData()
+        */
+      btnConfirmPhoto.addEventListener('click', function (e) {
+        btnConfirmPhoto.classList.add('hidden');
+        let file_name = photoTaken.toDataURL('image/jpeg', 1.0);
+        let force2FA = force2FactorsAuth.checked || false;
+        sendData(file_name, force2FA);
+      });
+
+      /*
+            Evento OnClick do Botão 'Tirar novamente' (#take-new-photo):
+            - Reseta o componente para o seu estado inicial
+            - Oculta os botões 'Confirmar' e 'Tirar novamente'
+            - Exibe o botão 'Captura'
+            - Oculta a foto capturada e ativa novamente a câmera
+        */
+      btnTakeNewPhoto.addEventListener('click', function (e) {
+        btnTakePhoto.classList.remove('hidden');
+        btnConfirmPhoto.classList.add('hidden');
+        btnTakeNewPhoto.classList.add('hidden');
+
+        camera.classList.remove('hidden');
+        photoTaken.classList.add('hidden');
+        photoTaken.classList.remove('show');
+
+        showMessage('success', false);
+        showMessage('validate', false);
+        showMessage('error', false);
+        showLoading(false);
+      });
+
+      /*
+            function showMessage(type = "error", show = true)
+            - Mostra/oculta a caixa de messagem conforme o tipo (success, validate, error)
+
+            Parâmetros:
+            - type: tipo da mensagem - "success", "validate", "error"
+            - show (Opcional, padrão: true): Mostra ou oculta
+
+            Retorno da função: nenhum retorno
+        */
+      function showMessage(type = 'error', show = true) {
+        let messageDialog;
+        if (type === 'success') {
+          messageDialog = successMessage;
+        } else if (type === 'validate') {
+          messageDialog = validateMessage;
+        } else if (type === 'select-email') {
+          messageDialog = selectEmailMessage;
+        } else if (type === 'error') {
+          messageDialog = errorMessage;
+        }
+
+        if (show) {
+          messageDialog.parentElement.classList.remove('hidden');
+          messageDialog.classList.remove('hidden');
+        } else {
+          messageDialog.parentElement.classList.add('hidden');
+          messageDialog.classList.add('hidden');
+        }
+      }
+
+      function confirmEmail() {
+        showLoading(true);
+        let userId = document.querySelector(
+          'input[name="emailList"]:checked'
+        ).value;
+
+        let email = document.querySelector(
+          'input[name="emailList"]:checked'
+        ).getAttribute('data-email');
+
+        selectedEmail = email;
+
+        //Envia os dados para a API
+        const url = apiUrl.endsWith('/') ? 
+          `${apiUrl}2fa/${userId}/generate?email=${email}` : `${apiUrl}/2fa/${userId}/generate?email=${email}`
+        fetch(url, {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer '+token }, // adicione aqui o seu token de aplicação
+        })
+          .then((responseData) => {
+            showMessage('select-email', false);
+            //código enviado com sucesso
+            responseData.json().then((data) => {
+              console.log(data);
+              if (data.id != null) {
+                let messageText = faceRecognition.querySelector(
+                  '.message-dialog.validate .message-text'
+                );
+                messageText.innerHTML = `Por favor, digite o código que enviamos em ${ofuscateEmail(
+                  selectedEmail
+                )}`;
+                validateId = data.id;
+                showMessage('validate', true);
+              }
+            });
+          })
+          .catch((responseData) => {
+            let invalidCodeMessage = faceRecognition.querySelector(
+              '.message-dialog.validate span.error'
+            );
+            invalidCodeMessage.classList.remove('hidden');
+          })
+          .finally(() => {
+            validationCode.removeAttribute('disabled');
+            showLoading(false);
+          });
+      }
+
+      /*
+            function sendValidationCode()
+            - Envia para validação o código digitado
+            - Caso o código esteja errado, exibir mensagem de erro
+            - Caso o código esteja correto, exibir mensagem de sucesso
+
+            Parâmetros: nenhum parâmetro
+
+            Retorno da função: nenhum retorno
+        */
+      function sendValidationCode() {
+        let value = validationCode.value;
+
+        //Envia os dados para a API
+        const url = apiUrl.endsWith('/') ? `${apiUrl}2fa/${validateId}/validate?code=${value}` : `${apiUrl}/2fa/${validateId}/validate?code=${value}`
+        fetch(url, {
+          method: 'GET',
+          headers: { 'Authorization': 'Bearer '+ token },
+        })
+          .then((responseData) => {
+            //código enviado com sucesso
+            responseData.json().then((data) => {
+              if (data === false) {
+                let invalidCodeMessage = faceRecognition.querySelector(
+                  '.message-dialog.validate span.error'
+                );
+                invalidCodeMessage.classList.remove('hidden');
+              } else {
+                showMessage('validate', false);
+                showMessage('success', true);
+              }
+            });
+          })
+          .catch((responseData) => {
+            let invalidCodeMessage = faceRecognition.querySelector(
+              '.message-dialog.validate span.error'
+            );
+            invalidCodeMessage.classList.remove('hidden');
+          })
+          .finally(() => {
+            validationCode.removeAttribute('disabled');
+          });
+      }
+
+      /*
+            Evento OnInput do Campo 'Código de validação' (#validate-code):
+            - Ao inserir dados no campo, se houver 6 caractéres, o código é validado na API
+        */
+      validationCode.addEventListener('input', function (e) {
+        let invalidCodeMessage = faceRecognition.querySelector(
+          '.message-dialog.validate span.error'
+        );
+        if (validationCode.value.length === 6) {
+          sendValidationCode();
+        } else {
+          invalidCodeMessage.classList.add('hidden');
+        }
+      });
+    </script>
+    <style>
+      .snippet {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      }
+
+      /* Resolução da imagem capturada */
+      #face-recognition,
+      #face-recognition .container-camera,
+      #face-recognition video,
+      #face-recognition canvas {
+        width: 400px;
+        height: 300px;
+        border-radius: 5px;
+      }
+
+      /* INICIO: Estilo dos containers */
+      #face-recognition .container-camera {
+        background-color: rgb(246, 246, 246);
+        margin-bottom: 5px;
+        position: relative;
+      }
+
+      #face-recognition .container-button {
+        text-align: center;
+      }
+
+      /* FIM: Estilo dos containers */
+
+      /* INICIO: Estilo gerais */
+      .large.input {
+        padding: 4px;
+        text-align: center;
+        font-family: Verdana, Geneva, Tahoma, sans-serif;
+        font-size: 20px;
+        text-transform: uppercase;
+      }
+      .email-list {
+        font-size: 80%;
+        white-space: nowrap;
+        text-align: left !important;
+      }
+
+      .error {
+        color: tomato;
+      }
+      /* FIM: Estilo gerais */
+
+      /* INICIO: Estilo dos botões */
+      .snippet .button {
+        padding: 0.25rem 0.75rem;
+        font-size: 0.875rem;
+        line-height: 1.5;
+        border-radius: 0.2rem;
+        color: #fff;
+        background-color: #007bff;
+        border: 1px solid #007bff;
+        text-shadow: 0px 1px 0 #0069d9;
+        box-shadow: 0px 3px 0 #0069d9;
+        cursor: pointer;
+      }
+
+      .snippet .button:hover {
+        border: 1px solid #0069d9;
+        background-color: #0069d9;
+        box-shadow: 0px 3px 0 #0056b2;
+      }
+
+      .snippet .button.button-success {
+        background-color: #1fb250;
+        border: 1px solid #1fb250;
+        text-shadow: 0px 1px 0 #1da149;
+        box-shadow: 0px 3px 0 #1da149;
+        cursor: pointer;
+      }
+
+      .snippet .button.button-success:hover {
+        border: 1px solid #1da149;
+        background-color: #1da149;
+        box-shadow: 0px 3px 0 #158239;
+      }
+
+      .snippet .button.button-cancel {
+        background-color: #ff004c;
+        border: 1px solid #ff004c;
+        text-shadow: 0px 1px 0 #cf0340;
+        box-shadow: 0px 3px 0 #cf0340;
+        cursor: pointer;
+      }
+
+      .snippet .button.button-cancel:hover {
+        border: 1px solid #cf0340;
+        background-color: #cf0340;
+        box-shadow: 0px 3px 0 #b20036;
+      }
+
+      /* FIM: Estilo dos botões */
+
+      /* INICIO: Ícones */
+      .snippet .icon-camera::before {
+        content: '';
+        width: 16px;
+        height: 16px;
+        display: inline-block;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23FFF' viewBox='0 0 16 16'%3E%3Cpath d='M10.5 8.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z'/%3E%3Cpath d='M2 4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-1.172a2 2 0 0 1-1.414-.586l-.828-.828A2 2 0 0 0 9.172 2H6.828a2 2 0 0 0-1.414.586l-.828.828A2 2 0 0 1 3.172 4H2zm.5 2a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1zm9 2.5a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0z'/%3E%3C/svg%3E");
+        background-size: contain;
+        background-repeat: no-repeat;
+        background-position: center;
+        transform: translateY(2px);
+      }
+
+      .snippet .icon-ok::before {
+        content: '';
+        width: 16px;
+        height: 16px;
+        display: inline-block;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23FFFFFF' class='bi bi-check' viewBox='0 0 16 16'%3E%3Cpath d='M10.97 4.97a.75.75 0 0 1 1.07 1.05l-3.99 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.267.267 0 0 1 .02-.022z'/%3E%3C/svg%3E");
+        background-size: contain;
+        background-repeat: no-repeat;
+        background-position: center;
+        transform: translateY(3px);
+      }
+
+      .snippet .icon-cancel::before {
+        content: '';
+        width: 16px;
+        height: 16px;
+        display: inline-block;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23FFF' class='bi bi-x' viewBox='0 0 16 16'%3E%3Cpath d='M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
+        background-size: contain;
+        background-repeat: no-repeat;
+        background-position: center;
+        transform: translateY(3px);
+      }
+
+      /* FIM: Ícones */
+
+      /* Oculta o elemento */
+      .snippet .hidden {
+        display: none;
+      }
+
+      /* Ativa o efeito 'fade-in' */
+      .snippet .fade {
+        opacity: 0;
+        transition: opacity cubic-bezier(0.075, 0.82, 0.165, 1) 1s;
+      }
+
+      /* Inicializa o efeito de 'fade-in' */
+      .snippet .fade.show {
+        opacity: 1;
+      }
+
+      .snippet .message-box {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        padding: 12px;
+        background-color: #fff;
+        border-radius: 5px;
+      }
+
+      .message-dialog {
+        display: flex;
+        flex-direction: column;
+        min-width: 150px;
+      }
+
+      .message-box > .message-dialog > div {
+        text-align: center;
+        font-weight: 500;
+        min-width: 150px;
+      }
+
+      .message-icon {
+        position: relative;
+        width: 150px;
+        height: 135px;
+        margin: 0 auto;
+      }
+
+      /* INICIO: Ícones animados */
+
+      .green-stroke {
+        stroke: #7cb342;
+      }
+
+      .red-stroke {
+        stroke: #ff6245;
+      }
+
+      .yellow-stroke {
+        stroke: #ffc107;
+      }
+
+      .circular {
+        width: 150px;
+      }
+
+      .circular circle.path {
+        stroke-dasharray: 330;
+        stroke-dashoffset: 0;
+        stroke-linecap: round;
+        opacity: 0.95;
+        animation: 0.7s draw-circle ease-out;
+      }
+
+      .checkmark {
+        stroke-width: 6.25;
+        stroke-linecap: round;
+        position: absolute;
+        top: 56px;
+        left: 49px;
+        width: 52px;
+        height: 40px;
+      }
+
+      .checkmark path {
+        animation: 1s draw-check ease-out;
+      }
+
+      @keyframes draw-circle {
+        0% {
+          stroke-dasharray: 0, 330;
+          stroke-dashoffset: 0;
+          opacity: 1;
+        }
+
+        80% {
+          stroke-dasharray: 330, 330;
+          stroke-dashoffset: 0;
+          opacity: 1;
+        }
+
+        100% {
+          opacity: 0.4;
+        }
+      }
+
+      @keyframes draw-check {
+        0% {
+          stroke-dasharray: 49, 80;
+          stroke-dashoffset: 48;
+          opacity: 0;
+        }
+
+        50% {
+          stroke-dasharray: 49, 80;
+          stroke-dashoffset: 48;
+          opacity: 1;
+        }
+
+        100% {
+          stroke-dasharray: 130, 80;
+          stroke-dashoffset: 48;
+        }
+      }
+
+      .cross {
+        stroke-width: 6.25;
+        stroke-linecap: round;
+        position: absolute;
+        top: 54px;
+        left: 54px;
+        width: 40px;
+        height: 40px;
+      }
+
+      .cross .first-line {
+        animation: 0.7s draw-first-line ease-out;
+      }
+
+      .cross .second-line {
+        animation: 0.7s draw-second-line ease-out;
+      }
+
+      @keyframes draw-first-line {
+        0% {
+          stroke-dasharray: 0, 56;
+          stroke-dashoffset: 0;
+        }
+
+        50% {
+          stroke-dasharray: 0, 56;
+          stroke-dashoffset: 0;
+        }
+
+        100% {
+          stroke-dasharray: 56, 330;
+          stroke-dashoffset: 0;
+        }
+      }
+
+      @keyframes draw-second-line {
+        0% {
+          stroke-dasharray: 0, 55;
+          stroke-dashoffset: 1;
+        }
+
+        50% {
+          stroke-dasharray: 0, 55;
+          stroke-dashoffset: 1;
+        }
+
+        100% {
+          stroke-dasharray: 55, 0;
+          stroke-dashoffset: 70;
+        }
+      }
+
+      .alert-sign {
+        stroke-width: 6.25;
+        stroke-linecap: round;
+        position: absolute;
+        top: 40px;
+        left: 68px;
+        width: 15px;
+        height: 70px;
+        animation: 0.5s alert-sign-bounce
+          cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      }
+
+      .alert-sign .dot {
+        stroke: none;
+        fill: #ffc107;
+      }
+
+      @keyframes alert-sign-bounce {
+        0% {
+          transform: scale(0);
+          opacity: 0;
+        }
+
+        50% {
+          transform: scale(0);
+          opacity: 1;
+        }
+
+        100% {
+          transform: scale(1);
+        }
+      }
+
+      .lds-dual-ring {
+        display: inline-block;
+        width: 80px;
+        height: 80px;
+      }
+
+      .lds-dual-ring:after {
+        content: ' ';
+        display: inline-block;
+        width: 50px;
+        height: 50px;
+        margin: 8px;
+        border-radius: 50%;
+        border: 6px solid #0069d9;
+        border-color: #0069d9 transparent #0069d9 transparent;
+        animation: lds-dual-ring 1.2s linear infinite;
+      }
+
+      @keyframes lds-dual-ring {
+        0% {
+          transform: rotate(0deg);
+        }
+
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+      /* FIM: Ícones animados */
+    </style>
+  </body>
+</html>

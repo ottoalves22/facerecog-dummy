@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang='pt-br'>
+
+<head>
+    <meta charset='UTF-8' />
+    <meta http-equiv='X-UA-Compatible' content='IE=edge' />
+    <meta name='viewport' content='width=device-width, initial-scale=1.0' />
+    <title>Emoção</title>
+</head>
+
+<body>
+    <!-- INICIO: Identificação de Emoções Mediante Expressões Faciais com Processamento em Servidor -->
+    <div class='snippet' id='face-emotion'>
+        <div class="row">
+            <div class="column">
+                <div class='container-camera' id="photo-camera">
+                    <!-- Elemento <video> de captura de câmera e <canvas> para exibição da foto capturada -->
+                    <video></video>
+                    <canvas class='hidden fade'></canvas>
+                </div>
+            </div>
+            <div class="column">
+                <h2>Emoções</h2>
+                <div id="emotion-suprise">
+                    <b class="emotion">Surpreso</b>
+                    <div class="progressbar"><span class="progress" style="width: 0%;"></span></div><span
+                        class="result">0%</span>
+                </div>
+                <div id="emotion-happy">
+                    <b class="emotion">Feliz</b>
+                    <div class="progressbar"><span class="progress" style="width: 0%;"></span></div><span
+                        class="result">0%</span>
+                </div>
+                <div id="emotion-neutral">
+                    <b class="emotion">Neutro</b>
+                    <div class="progressbar"><span class="progress" style="width: 0%;"></span></div><span
+                        class="result">0%</span>
+                </div>
+                <div id="emotion-disgust">
+                    <b class="emotion">Desgosto</b>
+                    <div class="progressbar"><span class="progress" style="width: 0%;"></span></div><span
+                        class="result">0%</span>
+                </div>
+                <div id="emotion-sad">
+                    <b class="emotion">Triste</b>
+                    <div class="progressbar"><span class="progress" style="width: 0%;"></span></div><span
+                        class="result">0%</span>
+                </div>
+                <div id="emotion-angry">
+                    <b class="emotion">Bravo</b>
+                    <div class="progressbar"><span class="progress" style="width: 0%;"></span></div><span
+                        class="result">0%</span>
+                </div>
+                <div id="emotion-fear">
+                    <b class="emotion">Medo</b>
+                    <div class="progressbar"><span class="progress" style="width: 0%;"></span></div><span
+                        class="result">0%</span>
+                </div>
+                <small id="emotion-status"></small>
+            </div>
+        </div>
+        <div class="row">
+            <div class="column container-button">
+                <!-- Botões da interface -->
+                <button id='enable-camera' class='button button-primary'>
+                    <i class='icon-camera'></i>
+                    Habilitar câmera
+                </button>
+                <button id='take-photo' class='button button-primary hidden'>
+                    <i class='icon-camera'></i>
+                    Capturar
+                </button>
+                <button id='confirm-photo' class='button button-success hidden'>
+                    <i class='icon-ok'></i>
+                    Confirmar
+                </button>
+                <button id='take-new-photo' class='button button-cancel hidden'>
+                    <i class='icon-cancel'></i>
+                    Tirar novamente
+                </button>
+            </div>
+            <div class="column container-button">
+            </div>
+        </div>
+    </div>
+    <!-- FIM: Identificação de Emoções Mediante Expressões Faciais com Processamento em Servidor  -->
+
+    <script>
+        //Placeholhder para endereço da api
+        let apiUrl = "<API_URL>"
+
+        //Placeholhder para token de acesso
+        let token = "<API_TOKEN>"
+
+        /* Principais elementos da interface:
+            - faceEmotion: <div> que engloba o componente
+            - camera: <video> que exibe a captura da webcam
+            - photoTaken: <canvas> que exibe a foto capturada
+            - btnEnableCamera: <button> que habilita a webcam
+            - btnTakePhoto: <button> que dispara a captura da foto
+            - btnConfirmPhoto: <button> que confirma a captura da foto
+            - btnTakeNewPhoto: <button> que permite capturar uma nova foto
+        */
+        let faceEmotion = document.getElementById('face-emotion')
+
+        let photoCamera = document.getElementById('photo-camera')
+        let camera = photoCamera.querySelector('video');
+        let photoTaken = photoCamera.querySelector('canvas');
+
+        let btnEnableCamera = document.getElementById('enable-camera');
+        let btnTakePhoto = document.getElementById('take-photo');
+        let btnConfirmPhoto = document.getElementById('confirm-photo');
+        let btnTakeNewPhoto = document.getElementById('take-new-photo');
+
+
+        /* Elementos que exibem a predição de emoção na interface */
+        let emotionSurprise = document.getElementById('emotion-suprise');
+        let emotionHappy = document.getElementById('emotion-happy');
+        let emotionNeutral = document.getElementById('emotion-neutral');
+        let emotionDisgust = document.getElementById('emotion-disgust');
+        let emotionSad = document.getElementById('emotion-sad');
+        let emotionAngry = document.getElementById('emotion-angry');
+        let emotionFear = document.getElementById('emotion-fear');
+        let emotionStatus = document.getElementById('emotion-status');
+
+        let emotionSurpriseProgress = emotionSurprise.querySelector(".progress");
+        let emotionHappyProgress = emotionHappy.querySelector(".progress");
+        let emotionNeutralProgress = emotionNeutral.querySelector(".progress");
+        let emotionDisgustProgress = emotionDisgust.querySelector(".progress");
+        let emotionSadProgress = emotionSad.querySelector(".progress");
+        let emotionAngryProgress = emotionAngry.querySelector(".progress");
+        let emotionFearProgress = emotionFear.querySelector(".progress");
+
+        let emotionSurpriseResult = emotionSurprise.querySelector(".result");
+        let emotionHappyResult = emotionHappy.querySelector(".result");
+        let emotionNeutralResult = emotionNeutral.querySelector(".result");
+        let emotionDisgustResult = emotionDisgust.querySelector(".result");
+        let emotionSadResult = emotionSad.querySelector(".result");
+        let emotionAngryResult = emotionAngry.querySelector(".result");
+        let emotionFearResult = emotionFear.querySelector(".result");
+
+
+        /*  
+            function b64toBlob(dataURI)
+            - Converve uma string na base64 em um objeto blob.
+    
+            Parâmetros:
+            - dataURI: recebe uma string na base 64.
+
+            Retorno da função: um objeto do tipo blob.
+        */
+        function b64toBlob(dataURI) {
+            var byteString = atob(dataURI.split(',')[1]);
+            var ab = new ArrayBuffer(byteString.length);
+            var ia = new Uint8Array(ab);
+
+            for (var i = 0; i < byteString.length; i++) {
+                ia[i] = byteString.charCodeAt(i);
+            }
+            return new Blob([ab], { type: 'image/jpeg' });
+        }
+
+
+        /*  
+            function startWebcam(videoElement)
+            - Inicializa a captura da câmera, pedindo permissão para acesso à câmera. Caso a permissão for negada, exibe-se uma mensagem de erro.
+            
+            Parâmetros:
+            - videoElement (obrigatório): elemento <video> no qual será exibido a captura da câmera.
+            
+            Retorno da função: Nenhum retorno
+        */
+        function startWebcam(videoElement) {
+            navigator.mediaDevices.getUserMedia({
+                video: true
+            }).then((stream) => {
+                window.localStream = stream;
+                videoElement.srcObject = stream;
+                videoElement.play();
+                btnEnableCamera.classList.add('hidden');
+                btnTakePhoto.classList.remove('hidden');
+            }).catch(() => {
+                btnEnableCamera.classList.remove('hidden');
+                btnTakePhoto.classList.add('hidden');
+                alert('Não foi possível acessar a câmera');
+            }).finally(() => {
+                btnConfirmPhoto.classList.add('hidden');
+                btnTakeNewPhoto.classList.add('hidden');
+                camera.classList.remove('hidden');
+                photoTaken.classList.add('hidden');
+                photoTaken.classList.remove('show');
+            })
+        }
+
+
+        /*  
+            function sendData(full_name, email, document, external_cod, filename)
+            - Insere os dados num FormData e envia para a API. 
+            - Se a resposta da API for bem-sucedida, mostrar as informações na tela.
+    
+            Parâmetros:
+            - filename: Foto do usuário
+            Retorno da função: Nenhum retorno.
+        */
+        function sendData(filename, document = '') {
+            //Insere os dados num FormData
+            let formData = new FormData();
+            formData.append('file', b64toBlob(filename), Math.random() + '.jpg');
+            formData.append('cpfcnpj', '');
+            //Envia os dados para a API
+            
+            emotionStatus.innerHTML = "Carregando dados...";
+            fetch(`${apiUrl}`, {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer '+ token }, 
+                body: formData,
+            })
+                .then((responseData) => {
+                    //Registro salvo com sucesso
+                    responseData.json().then((data) => {
+                        if (typeof data.emotion.surprise != "undefined") {
+                            emotionSurpriseProgress.style = "width:" + Math.round(data.emotion.surprise * 100) + "%";
+                            emotionSurpriseResult.innerHTML = Math.round(data.emotion.surprise * 100) + "%";
+
+                            emotionHappyProgress.style = "width:" + Math.round(data.emotion.happy * 100) + "%";
+                            emotionHappyResult.innerHTML = Math.round(data.emotion.happy * 100) + "%";
+
+                            emotionNeutralProgress.style = "width:" + Math.round(data.emotion.neutral * 100) + "%";
+                            emotionNeutralResult.innerHTML = Math.round(data.emotion.neutral * 100) + "%";
+
+                            emotionDisgustProgress.style = "width:" + Math.round(data.emotion.disgust * 100) + "%";
+                            emotionDisgustResult.innerHTML = Math.round(data.emotion.disgust * 100) + "%";
+
+                            emotionSadProgress.style = "width:" + Math.round(data.emotion.sad * 100) + "%";
+                            emotionSadResult.innerHTML = Math.round(data.emotion.sad * 100) + "%";
+
+                            emotionAngryProgress.style = "width:" + Math.round(data.emotion.angry * 100) + "%";
+                            emotionAngryResult.innerHTML = Math.round(data.emotion.angry * 100) + "%";
+
+                            emotionFearProgress.style = "width:" + Math.round(data.emotion.fear * 100) + "%";
+                            emotionFearResult.innerHTML = Math.round(data.emotion.fear * 100) + "%";      
+
+                            emotionStatus.innerHTML = "";
+                        }
+                        else {
+                            emotionSurpriseProgress.style = "width:0%";
+                            emotionSurpriseResult.innerHTML = "0%";
+
+                            emotionHappyProgress.style = "width:0%";
+                            emotionHappyResult.innerHTML = "0%";
+
+                            emotionNeutralProgress.style = "width:0%";
+                            emotionNeutralResult.innerHTML = "0%";
+
+                            emotionDisgustProgress.style = "width:0%";
+                            emotionDisgustResult.innerHTML = "0%";
+
+                            emotionSadProgress.style = "width:0%";
+                            emotionSadResult.innerHTML = "0%";
+
+                            emotionAngryProgress.style = "width:0%";
+                            emotionAngryResult.innerHTML = "0%";
+
+                            emotionFearProgress.style = "width:0%";
+                            emotionFearResult.innerHTML = "0%";
+
+                            emotionStatus.innerHTML = "Nenhum rosto detectado.";
+                        }
+                    })
+                }).catch((responseData) => {
+                    //Erro ao tentar salvar o registro
+                    alert('Não foi possível enviar os dados. Tente novamente mais tarde!');
+                })
+        }
+
+
+
+        /*
+            Evento OnClick do Botão 'Capturar' (#take-photo):
+            - Captura a imagem atual da câmera nas mesmas medidas e exibe a foto no elemento <canvas>.
+            - Desativa a câmera, oculta o elemento e exibe a foto capturada após 200ms.
+            - Oculta o botão 'Capturar' e exibe os botões 'Confirmar' e 'Tirar novamente'.
+        */
+        btnTakePhoto.addEventListener('click', function (e) {
+            photoTaken.height = camera.videoHeight;
+            photoTaken.width = camera.videoWidth;
+            var context = photoTaken.getContext('2d');
+            context.drawImage(camera, 0, 0);
+
+            camera.classList.add('hidden');
+            photoTaken.classList.remove('hidden');
+
+            btnTakePhoto.classList.add('hidden');
+            btnConfirmPhoto.classList.remove('hidden');
+            btnTakeNewPhoto.classList.remove('hidden');
+            setTimeout(() => {
+                photoTaken.classList.add('show');
+            }, 200)
+        })
+
+
+
+
+        /*
+            Evento OnClick do Botão 'Tirar novamente' (#take-new-photo):
+            - Reseta o componente para o seu estado inicial.
+            - Oculta os botões 'Confirmar' e 'Tirar novamente'.
+            - Exibe o botão 'Captura'.
+            - Oculta a foto capturada e ativa novamente a câmera.
+        */
+        btnTakeNewPhoto.addEventListener('click', function (e) {
+            btnTakePhoto.classList.remove('hidden');
+            btnConfirmPhoto.classList.add('hidden');
+            btnTakeNewPhoto.classList.add('hidden');
+
+            camera.classList.remove('hidden');
+            photoTaken.classList.add('hidden');
+            photoTaken.classList.remove('show');
+        })
+
+
+        /*
+            Evento OnClick do Botão 'Habilitar câmera' (#enable-camera):
+            - Inicializa a captura da câmera 
+        */
+        btnEnableCamera.addEventListener('click', function (e) {
+            //Inicializa a captura da câmera 
+            startWebcam(camera)
+        })
+
+
+        /*
+            Evento OnClick do Botão 'Confirmar' (#confirm-photo):
+            - Oculta os botões 'Captura', 'Confirmar' e 'Tirar novamente'.
+            - Envia os dados para a API
+        */
+        btnConfirmPhoto.addEventListener('click', function (e) {
+            btnTakePhoto.classList.add('hidden');
+            btnConfirmPhoto.classList.add('hidden');
+            btnTakeNewPhoto.classList.remove('hidden');
+            let filename = photoTaken.toDataURL('image/jpeg', 1.0);
+            sendData(filename)
+        })
+
+    </script>
+    <style>
+        .progressbar {
+            width: 200px;
+            height: 10px;
+            border-radius: 5px;
+            margin: 0px 6px;
+            background-color: #f6f6f6;
+            display: inline-block;
+        }
+
+        .progress {
+            width: 0px;
+            transition: width ease-in-out 1s;
+            height: 10px;
+            border-radius: 5px;
+            background-color: #0056b2;
+            display: block;
+        }
+
+        .emotion {
+            width: 70px;
+            display: inline-block;
+        }
+
+        /* INICIO: Estilo do componente */
+        .snippet {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        #face-emotion {
+            width: 700px;
+        }
+
+        #face-emotion .container-register {
+            flex-grow: 1;
+        }
+
+        #face-emotion .row {
+            flex-grow: 1;
+            display: flex;
+            gap: 15px;
+        }
+
+        #face-emotion .column {
+            width: -webkit-fill-available;
+            align-self: flex-start;
+        }
+
+        /* FIM: Estilo do componente */
+
+        /* INICIO: Estilo dos containers */
+        #face-emotion .container-camera,
+        #face-emotion video,
+        #face-emotion canvas {
+            width: 335px;
+            height: 250px;
+            border-radius: 5px;
+        }
+
+        #face-emotion .container-camera {
+            background-color: rgb(246, 246, 246);
+            margin-bottom: 5px;
+            position: relative;
+        }
+
+        #face-emotion .container-button {
+            text-align: center;
+        }
+
+        /* FIM: Estilo dos containers */
+
+
+        /* INICIO: Label */
+        .snippet label {
+            padding-top: 5px;
+            margin-bottom: 10px;
+            display: flex;
+            position: relative;
+        }
+
+        .snippet label>div {
+            width: auto;
+            min-height: 20px;
+            position: absolute;
+            background-color: #fff;
+            padding: 0px 2px;
+            left: 5px;
+            top: 12px;
+            transition: top .1s ease-in, left .1s ease-in, font-size .1s ease-in, color .1s ease-in;
+            color: rgb(171, 171, 171);
+        }
+
+        .snippet label:focus-within>div,
+        .snippet label.filled>div {
+            left: 3px;
+            top: -5px;
+            font-size: 80%;
+            padding: 0px 5px 0px 2px;
+            color: #333;
+        }
+
+        .snippet label>.input {
+            flex-grow: 1;
+            padding: 8px;
+        }
+
+        .snippet input[type='checkbox'] {
+            width: 14px;
+            height: 14px;
+            margin-right: 10px;
+        }
+
+        /* FIM: Label */
+
+
+        /* INICIO: Estilo dos botões */
+        .snippet .button {
+            padding: 0.25rem 0.75rem;
+            font-size: 0.875rem;
+            line-height: 1.5;
+            border-radius: 0.2rem;
+            color: #fff;
+            background-color: #007bff;
+            border: 1px solid #007bff;
+            text-shadow: 0px 1px 0 #0069d9;
+            box-shadow: 0px 3px 0 #0069d9;
+            cursor: pointer;
+        }
+
+        .snippet .button:hover(:not(:disabled)) {
+            border: 1px solid #0069d9;
+            background-color: #0069d9;
+            box-shadow: 0px 3px 0 #0056b2;
+        }
+
+        .snippet .button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .snippet .button.button-success {
+            background-color: #1fb250;
+            border: 1px solid #1fb250;
+            text-shadow: 0px 1px 0 #1da149;
+            box-shadow: 0px 3px 0 #1da149;
+            cursor: pointer;
+        }
+
+        .snippet .button.button-success:hover {
+            border: 1px solid #1da149;
+            background-color: #1da149;
+            box-shadow: 0px 3px 0 #158239;
+        }
+
+        .snippet .button.button-cancel {
+            background-color: #ff004c;
+            border: 1px solid #ff004c;
+            text-shadow: 0px 1px 0 #cf0340;
+            box-shadow: 0px 3px 0 #cf0340;
+            cursor: pointer;
+        }
+
+        .snippet .button.button-cancel:hover {
+            border: 1px solid #cf0340;
+            background-color: #cf0340;
+            box-shadow: 0px 3px 0 #b20036;
+        }
+
+        /* FIM: Estilo dos botões */
+
+        /* INICIO: Ícones */
+        .snippet .icon-camera::before {
+            content: '';
+            width: 16px;
+            height: 16px;
+            display: inline-block;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23FFF' viewBox='0 0 16 16'%3E%3Cpath d='M10.5 8.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z'/%3E%3Cpath d='M2 4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-1.172a2 2 0 0 1-1.414-.586l-.828-.828A2 2 0 0 0 9.172 2H6.828a2 2 0 0 0-1.414.586l-.828.828A2 2 0 0 1 3.172 4H2zm.5 2a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1zm9 2.5a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0z'/%3E%3C/svg%3E");
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            transform: translateY(2px);
+        }
+
+        .snippet .icon-ok::before {
+            content: '';
+            width: 16px;
+            height: 16px;
+            display: inline-block;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23FFFFFF' class='bi bi-check' viewBox='0 0 16 16'%3E%3Cpath d='M10.97 4.97a.75.75 0 0 1 1.07 1.05l-3.99 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.267.267 0 0 1 .02-.022z'/%3E%3C/svg%3E");
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            transform: translateY(3px);
+        }
+
+        .snippet .icon-cancel::before {
+            content: '';
+            width: 16px;
+            height: 16px;
+            display: inline-block;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23FFF' class='bi bi-x' viewBox='0 0 16 16'%3E%3Cpath d='M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            transform: translateY(3px);
+        }
+
+        /* FIM: Ícones */
+
+        /* Oculta o elemento */
+        .snippet .hidden {
+            display: none;
+        }
+
+        /* Ativa o efeito 'fade-in' */
+        .snippet .fade {
+            opacity: 0;
+            transition: opacity cubic-bezier(0.075, 0.82, 0.165, 1) 1s;
+        }
+
+        /* Inicializa o efeito de 'fade-in' */
+        .snippet .fade.show {
+            opacity: 1;
+        }
+    </style>
+</body>
+
+</html>

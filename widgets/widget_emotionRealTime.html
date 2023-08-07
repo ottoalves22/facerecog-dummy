@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang='pt-br'>
+
+<head>
+    <meta charset='UTF-8' />
+    <meta http-equiv='X-UA-Compatible' content='IE=edge' />
+    <meta name='viewport' content='width=device-width, initial-scale=1.0' />
+    <title>Emoção</title>
+</head>
+
+<body>
+    <!-- INICIO: Identificação de Emoções Mediante Expressões Faciais em Tempo Real -->
+
+
+    <div class='snippet' id='face-emotion'>
+        <div class="row">
+            <div class="column">
+                <div class="container-camera" id="photo-camera">
+                    <!-- Elemento <video> de captura de câmera e <canvas> para exibição da foto capturada -->
+                    <video></video>
+                    <canvas class="hidden fade" id="output"></canvas>
+                </div>
+            </div>
+            <div class="column">
+                <h2>Emoções</h2>
+                <div id="emotion-suprise">
+                    <b class="emotion">Surpreso</b>
+                    <div class="progressbar"><span class="progress" style="width: 0%;"></span></div><span
+                        class="result">0%</span>
+                </div>
+                <div id="emotion-happy">
+                    <b class="emotion">Feliz</b>
+                    <div class="progressbar"><span class="progress" style="width: 0%;"></span></div><span
+                        class="result">0%</span>
+                </div>
+                <div id="emotion-neutral">
+                    <b class="emotion">Neutro</b>
+                    <div class="progressbar"><span class="progress" style="width: 0%;"></span></div><span
+                        class="result">0%</span>
+                </div>
+                <div id="emotion-disgust">
+                    <b class="emotion">Desgosto</b>
+                    <div class="progressbar"><span class="progress" style="width: 0%;"></span></div><span
+                        class="result">0%</span>
+                </div>
+                <div id="emotion-sad">
+                    <b class="emotion">Triste</b>
+                    <div class="progressbar"><span class="progress" style="width: 0%;"></span></div><span
+                        class="result">0%</span>
+                </div>
+                <div id="emotion-angry">
+                    <b class="emotion">Bravo</b>
+                    <div class="progressbar"><span class="progress" style="width: 0%;"></span></div><span
+                        class="result">0%</span>
+                </div>
+                <div id="emotion-fear">
+                    <b class="emotion">Medo</b>
+                    <div class="progressbar"><span class="progress" style="width: 0%;"></span></div><span
+                        class="result">0%</span>
+                </div>
+                <small id="emotion-status"></small>
+            </div>
+        </div>
+        <div class="row">
+            <div class="column container-button">
+                <!-- Botões da interface -->
+                <button id="enable-camera" class="button button-primary">
+                    <i class="icon-camera"></i>
+                    Habilitar câmera
+                </button>
+            </div>
+            <div class="column container-button">
+            </div>
+        </div>
+    </div>
+    <!-- FIM: Identificação de Emoções Mediante Expressões Faciais em Tempo Real -->
+
+
+
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.4.0/dist/tf.min.js"></script>
+    <script
+        src="https://cdn.jsdelivr.net/npm/@tensorflow-models/face-landmarks-detection@0.0.1/dist/face-landmarks-detection.js"></script>
+
+
+    <script>
+        //Placeholhder para endereço da api
+        let apiUrl = "<API_URL>"
+
+        //Placeholhder para token de acesso
+        let token = "<API_TOKEN>"
+
+        /* Principais elementos da interface:
+            - faceRecognition: <div> que engloba o componente
+            - camera: <video> que exibe a captura da webcam
+            - photoTaken: <canvas> que exibe a foto capturada
+
+            - btnEnableCamera: <button> que habilita a captura da webcam
+        */
+        let faceEmotion = document.getElementById('face-emotion')
+
+        let faceRecognition = document.getElementById('photo-camera')
+        let camera = faceRecognition.querySelector('video');
+        let photoTaken = faceRecognition.querySelector('canvas');
+
+        let btnEnableCamera = document.getElementById('enable-camera');
+
+        /* Elementos que exibem a predição de emoção na interface */
+        let emotionSurprise = document.getElementById('emotion-suprise');
+        let emotionHappy = document.getElementById('emotion-happy');
+        let emotionNeutral = document.getElementById('emotion-neutral');
+        let emotionDisgust = document.getElementById('emotion-disgust');
+        let emotionSad = document.getElementById('emotion-sad');
+        let emotionAngry = document.getElementById('emotion-angry');
+        let emotionFear = document.getElementById('emotion-fear');
+        let emotionStatus = document.getElementById('emotion-status');
+
+        let emotionSurpriseProgress = emotionSurprise.querySelector(".progress");
+        let emotionHappyProgress = emotionHappy.querySelector(".progress");
+        let emotionNeutralProgress = emotionNeutral.querySelector(".progress");
+        let emotionDisgustProgress = emotionDisgust.querySelector(".progress");
+        let emotionSadProgress = emotionSad.querySelector(".progress");
+        let emotionAngryProgress = emotionAngry.querySelector(".progress");
+        let emotionFearProgress = emotionFear.querySelector(".progress");
+
+        let emotionSurpriseResult = emotionSurprise.querySelector(".result");
+        let emotionHappyResult = emotionHappy.querySelector(".result");
+        let emotionNeutralResult = emotionNeutral.querySelector(".result");
+        let emotionDisgustResult = emotionDisgust.querySelector(".result");
+        let emotionSadResult = emotionSad.querySelector(".result");
+        let emotionAngryResult = emotionAngry.querySelector(".result");
+        let emotionFearResult = emotionFear.querySelector(".result");
+
+        /* Variáveis complementares da detecção de emoções */
+        let emotions = []; //["angry", "disgust", "fear", "happy", "neutral", "sad", "surprise"];
+        let emotionModel = null;
+
+        let output = null;
+        let model = null;
+
+
+        /*  
+            function startWebcam(videoElement)
+            - Inicializa a captura da câmera, pedindo permissão para acesso à câmera. Caso a permissão for negada, exibe-se uma mensagem de erro.
+            - Carrega o modelo treinado para reconhecimento de emoções.
+            
+            Parâmetros:
+            - videoElement (obrigatório): elemento <video> no qual será exibido a captura da câmera.
+            
+            Retorno da função: Nenhum retorno
+        */
+
+        function startWebcam(videoElement) {
+            navigator.mediaDevices.getUserMedia({
+                video: true
+            }).then((stream) => {
+                window.localStream = stream;
+                videoElement.srcObject = stream;
+                videoElement.play();
+
+                (async () => {
+                    model = await faceLandmarksDetection.load(
+                        faceLandmarksDetection.SupportedPackages.mediapipeFacemesh
+                    );
+
+                    let canvas = document.getElementById("output");
+                    canvas.width = videoElement.width;
+                    canvas.height = videoElement.height;
+
+                    //Constrói um espelho da câmera
+                    output = canvas.getContext("2d");
+                    output.translate(canvas.width, 0);
+                    output.scale(-1, 1);
+
+                    //Carregar o modelo
+                    const facemoUrl = apiUrl.endsWith('/') ? `${apiUrl}static/facemo.json` : `${apiUrl}/static/facemo.json`
+                    console.log(facemoUrl);
+                    emotionModel = await tf.loadLayersModel(facemoUrl);
+                    trackFace();
+                })();
+
+                btnEnableCamera.classList.add('hidden');
+            }).catch(() => {
+                btnEnableCamera.classList.remove('hidden');
+                alert('Não foi possível acessar a câmera');
+            }).finally(() => {
+                camera.classList.remove('hidden');
+            })
+        }
+
+
+        /*  
+            async function predictEmotion(points)
+            - Função assíncrona que realiza a predição de emoção com o tensorFlow JS
+            
+            Parâmetros:
+            - points (obrigatório): Pontos relacionados a posição do nariz, bochechas, olhos, sobrancelhas e boca
+            
+            Retorno da função: Array com a predição de emoção.
+        */
+        async function predictEmotion(points) {
+            let result = tf.tidy(() => {
+                const xs = tf.stack([tf.tensor1d(points)]);
+                return emotionModel.predict(xs);
+            });
+            let prediction = await result.data();
+            result.dispose();
+            return prediction;
+        }
+
+
+        /*  
+            async function trackFace()
+            - Função assíncrona que realiza a predição de emoção com o tensorFlow JS
+            
+            Parâmetros:
+            - points (obrigatório): Pontos relacionados a posição do nariz, bochechas, olhos, sobrancelhas e boca
+            
+            Retorno da função: Array com a predição de emoção.
+        */
+        async function trackFace() {
+            const faces = await model.estimateFaces({
+                input: camera,
+                returnTensors: false,
+                flipHorizontal: false,
+            });
+            output.drawImage(
+                camera,
+                0, 0, camera.width, camera.height,
+                0, 0, camera.width, camera.height
+            );
+
+            let points = null;
+            faces.forEach(face => {
+                //Bounding box dos rostos
+                const x1 = face.boundingBox.topLeft[0];
+                const y1 = face.boundingBox.topLeft[1];
+                const x2 = face.boundingBox.bottomRight[0];
+                const y2 = face.boundingBox.bottomRight[1];
+                const bWidth = x2 - x1;
+                const bHeight = y2 - y1;
+
+                //Capturar nariz, bochechas, olhos, sobrancelhas e boca
+                const features = [
+                    "noseTip",
+                    "leftCheek",
+                    "rightCheek",
+                    "leftEyeLower1", "leftEyeUpper1",
+                    "rightEyeLower1", "rightEyeUpper1",
+                    "leftEyebrowLower",
+                    "rightEyebrowLower",
+                    "lipsLowerInner",
+                    "lipsUpperInner",
+                ];
+                points = [];
+                features.forEach(feature => {
+                    face.annotations[feature].forEach(x => {
+                        points.push((x[0] - x1) / bWidth);
+                        points.push((x[1] - y1) / bHeight);
+                    });
+                });
+            });
+
+            //Se encontrar um rosto, executar a predição de emoção
+            if (points) {
+                let emotion = await predictEmotion(points);
+                emotions = emotion;
+                emotionSurpriseProgress.style = "width:" + Math.round(emotion[6] * 100) + "%";
+                emotionSurpriseResult.innerHTML = Math.round(emotion[6] * 100) + "%";
+
+                emotionHappyProgress.style = "width:" + Math.round(emotion[3] * 100) + "%";
+                emotionHappyResult.innerHTML = Math.round(emotion[3] * 100) + "%";
+
+                emotionNeutralProgress.style = "width:" + Math.round(emotion[4] * 100) + "%";
+                emotionNeutralResult.innerHTML = Math.round(emotion[4] * 100) + "%";
+
+                emotionDisgustProgress.style = "width:" + Math.round(emotion[1] * 100) + "%";
+                emotionDisgustResult.innerHTML = Math.round(emotion[1] * 100) + "%";
+
+                emotionSadProgress.style = "width:" + Math.round(emotion[5] * 100) + "%";
+                emotionSadResult.innerHTML = Math.round(emotion[5] * 100) + "%";
+
+                emotionAngryProgress.style = "width:" + Math.round(emotion[0] * 100) + "%";
+                emotionAngryResult.innerHTML = Math.round(emotion[0] * 100) + "%";
+
+                emotionFearProgress.style = "width:" + Math.round(emotion[2] * 100) + "%";
+                emotionFearResult.innerHTML = Math.round(emotion[2] * 100) + "%";
+
+                emotionStatus.innerHTML = "Atualizado a cada 1 segundo.";
+            }
+            else {
+                emotions = [];
+                emotionSurpriseProgress.style = "width:0%";
+                emotionSurpriseResult.innerHTML = "0%";
+
+                emotionHappyProgress.style = "width:0%";
+                emotionHappyResult.innerHTML = "0%";
+
+                emotionNeutralProgress.style = "width:0%";
+                emotionNeutralResult.innerHTML = "0%";
+
+                emotionDisgustProgress.style = "width:0%";
+                emotionDisgustResult.innerHTML = "0%";
+
+                emotionSadProgress.style = "width:0%";
+                emotionSadResult.innerHTML = "0%";
+
+                emotionAngryProgress.style = "width:0%";
+                emotionAngryResult.innerHTML = "0%";
+
+                emotionFearProgress.style = "width:0%";
+                emotionFearResult.innerHTML = "0%";
+
+                emotionStatus.innerHTML = "Nenhum rosto detectado.";
+            }
+            setTimeout(() => { requestAnimationFrame(trackFace) }, 1000);
+        }
+
+        /*
+            Evento OnClick do Botão 'Habilitar câmera' (#enable-camera):
+            - Inicializa a captura da câmera 
+        */
+        btnEnableCamera.addEventListener('click', function (e) {
+            //Inicializa a captura da câmera 
+            startWebcam(camera)
+        })
+
+
+    </script>
+    <style>
+        .progressbar {
+            width: 200px;
+            height: 10px;
+            border-radius: 5px;
+            margin: 0px 6px;
+            background-color: #f6f6f6;
+            display: inline-block;
+        }
+
+        .progress {
+            width: 0px;
+            transition: width ease-in-out .2s;
+            height: 10px;
+            border-radius: 5px;
+            background-color: #0056b2;
+            display: block;
+        }
+
+        .emotion {
+            width: 70px;
+            display: inline-block;
+        }
+
+        /* INICIO: Estilo do componente */
+        .snippet {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        #face-emotion {
+            width: 700px;
+        }
+
+        #face-emotion .container-register {
+            flex-grow: 1;
+        }
+
+        #face-emotion .row {
+            flex-grow: 1;
+            display: flex;
+            gap: 15px;
+        }
+
+        #face-emotion .column {
+            width: -webkit-fill-available;
+            align-self: flex-start;
+        }
+
+        /* FIM: Estilo do componente */
+
+        /* INICIO: Estilo dos containers */
+        #face-emotion .container-camera,
+        #face-emotion video,
+        #face-emotion canvas {
+            width: 335px;
+            height: 250px;
+            border-radius: 5px;
+        }
+
+        #face-emotion .container-camera {
+            background-color: rgb(246, 246, 246);
+            margin-bottom: 5px;
+            position: relative;
+        }
+
+        #face-emotion .container-button {
+            text-align: center;
+        }
+
+        /* FIM: Estilo dos containers */
+
+
+
+        /* INICIO: Estilo dos botões */
+        .snippet .button {
+            padding: 0.25rem 0.75rem;
+            font-size: 0.875rem;
+            line-height: 1.5;
+            border-radius: 0.2rem;
+            color: #fff;
+            background-color: #007bff;
+            border: 1px solid #007bff;
+            text-shadow: 0px 1px 0 #0069d9;
+            box-shadow: 0px 3px 0 #0069d9;
+            cursor: pointer;
+        }
+
+        .snippet .button:hover(:not(:disabled)) {
+            border: 1px solid #0069d9;
+            background-color: #0069d9;
+            box-shadow: 0px 3px 0 #0056b2;
+        }
+
+        .snippet .button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* FIM: Estilo dos botões */
+
+        /* INICIO: Ícones */
+        .snippet .icon-camera::before {
+            content: '';
+            width: 16px;
+            height: 16px;
+            display: inline-block;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23FFF' viewBox='0 0 16 16'%3E%3Cpath d='M10.5 8.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z'/%3E%3Cpath d='M2 4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-1.172a2 2 0 0 1-1.414-.586l-.828-.828A2 2 0 0 0 9.172 2H6.828a2 2 0 0 0-1.414.586l-.828.828A2 2 0 0 1 3.172 4H2zm.5 2a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1zm9 2.5a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0z'/%3E%3C/svg%3E");
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            transform: translateY(2px);
+        }
+
+        /* FIM: Ícones */
+
+        /* Oculta o elemento */
+        .snippet .hidden {
+            display: none;
+        }
+
+        /* Ativa o efeito 'fade-in' */
+        .snippet .fade {
+            opacity: 0;
+            transition: opacity cubic-bezier(0.075, 0.82, 0.165, 1) 1s;
+        }
+
+        /* Inicializa o efeito de 'fade-in' */
+        .snippet .fade.show {
+            opacity: 1;
+        }
+    </style>
+</body>
+
+</html>
