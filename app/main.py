@@ -26,10 +26,14 @@ Mechanism to verify the user using their email, adding one new layer of security
 ### Match
 
 You will be able to compare a new person photo with all the pictures included on this service database.
+
+### Emotion
+
+With this service, you will be able to detect emotion regarding their aspects in any human face.
+
 """
 
 app = FastAPI(title='LIS Facerecog API', description=description, version='1.0.0', openapi_url='/facerecog/openapi.json', docs_url='/facerecog/docs', redoc_url='/facerecog/redoc')
-# app = FastAPI(title='LIS Emotion Recog API', description=description, version='1.0.0', openapi_url='/emotion/openapi.json' , docs_url='/emotion/docs', redoc_url='/emotion/redoc')
 
 
 app.add_middleware(
@@ -41,7 +45,6 @@ app.add_middleware(
 )
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
-app.mount("/emotion/static", StaticFiles(directory="static"), name="static")
 
 auth = HTTPBearer()
 
